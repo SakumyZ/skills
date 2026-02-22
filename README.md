@@ -14,6 +14,7 @@ A collection of skills designed for AI coding assistants, covering frontend deve
 | [excel-sheet-splitter](#excel-sheet-splitter)         | Excel worksheet splitter        | Data Processing |
 | [excel-to-markdown](#excel-to-markdown)               | Excel to Markdown converter     | Data Processing |
 | [github-pr-workflow](#github-pr-workflow)             | GitHub PR automation workflow   | Project Mgmt    |
+| [chat-to-obsidian-note](#chat-to-obsidian-note)       | Chat to Obsidian knowledge note | Utilities       |
 | [model-id-lookup](#model-id-lookup)                   | AI model ID lookup              | Utilities       |
 | [perf-analyzer](#perf-analyzer)                       | Frontend performance analysis   | Code Quality    |
 | [redmine-search](#redmine-search)                     | Redmine ticket search           | Project Mgmt    |
@@ -143,6 +144,15 @@ Automatically generates actionable development plans from Redmine tickets.
 
 ## 🔍 Utilities
 
+### chat-to-obsidian-note
+
+Extracts valuable technical content from AI chat sessions and saves it as structured Obsidian notes.
+
+- Three document types: Problem-solving, Knowledge-learning, Solution-comparison
+- Auto-infers knowledge base category with user confirmation
+- Generates Obsidian-compatible Markdown with frontmatter and `[[wiki links]]`
+- Follows existing knowledge base folder structure and naming conventions
+
 ### model-id-lookup
 
 Look up and verify AI model IDs.
@@ -175,6 +185,9 @@ skills/
 ├── github-pr-workflow/         # GitHub PR workflow
 │   ├── SKILL.md
 │   └── scripts/
+├── chat-to-obsidian-note/      # Chat to Obsidian note
+│   ├── SKILL.md
+│   └── references/
 ├── model-id-lookup/            # Model ID lookup
 │   ├── SKILL.md
 │   ├── scripts/

@@ -14,6 +14,7 @@
 | [excel-sheet-splitter](#excel-sheet-splitter)         | Excel 工作表拆分工具   | 数据处理 |
 | [excel-to-markdown](#excel-to-markdown)               | Excel 转 Markdown 表格 | 数据处理 |
 | [github-pr-workflow](#github-pr-workflow)             | GitHub PR 自动化工作流 | 项目管理 |
+| [chat-to-obsidian-note](#chat-to-obsidian-note)       | 聊天转 Obsidian 笔记   | 工具     |
 | [model-id-lookup](#model-id-lookup)                   | AI 模型 ID 查询        | 工具     |
 | [perf-analyzer](#perf-analyzer)                       | 前端性能分析           | 代码质量 |
 | [redmine-search](#redmine-search)                     | Redmine 工单查询       | 项目管理 |
@@ -143,6 +144,15 @@
 
 ## 🔍 工具
 
+### chat-to-obsidian-note
+
+从 AI 聊天内容中提取有价值的技术信息，生成结构化文档并保存到 Obsidian 知识库。
+
+- 支持三种文档类型：问题解决型、知识学习型、方案对比型
+- 自动推断知识库分类目录，用户确认后保存
+- 生成符合 Obsidian 规范的 Markdown（含 frontmatter 和 `[[双链]]`）
+- 遵循知识库现有目录结构和命名规范
+
 ### model-id-lookup
 
 查询和验证 AI 模型 ID。
@@ -175,6 +185,9 @@ skills/
 ├── github-pr-workflow/         # GitHub PR 工作流
 │   ├── SKILL.md
 │   └── scripts/
+├── chat-to-obsidian-note/      # 聊天转 Obsidian 笔记
+│   ├── SKILL.md
+│   └── references/
 ├── model-id-lookup/            # 模型 ID 查询
 │   ├── SKILL.md
 │   ├── scripts/
