@@ -1,264 +1,306 @@
-import openpyxl
-from openpyxl.utils.exceptions import InvalidFileException
-import logging
-import os
-import sys
+#!/usr/bin/env python3
+"""
+excel_to_md.py
+
+Excel (.xlsx) -> Markdown / HTML
+支持：
+- 合并单元格 fill / tl
+- 日志
+- 真实列优化
+- 删除线内容自动忽略
+"""
+
 import argparse
-
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
-logger = logging.getLogger(__name__)
-
-
-def get_merged_cell_value(ws, row, col, merged_ranges):
-    """获取合并单元格的值：如果 (row, col) 在某个合并区域内，返回该区域左上角的值"""
-    for merge_range in merged_ranges:
-        if (
-            merge_range.min_row <= row <= merge_range.max_row
-            and merge_range.min_col <= col <= merge_range.max_col
-        ):
-            return ws.cell(row=merge_range.min_row, column=merge_range.min_col).value
-    return ws.cell(row=row, column=col).value
+import openpyxl
+from openpyxl.utils import range_boundaries
+import os
+import re
+import logging
+import time
+from html import escape
 
 
-def get_cell_style_annotations(ws, row, col):
-    """提取单元格样式的语义标注"""
-    cell = ws.cell(row=row, column=col)
-    annotations = []
+# ========= logging =========
 
-    # 粗体
-    if cell.font and cell.font.bold:
-        annotations.append("bold")
+logger = logging.getLogger("excel_to_md")
 
-    # 背景色（非白色/无填充）
-    if cell.fill and cell.fill.fgColor and cell.fill.fgColor.rgb:
-        rgb = str(cell.fill.fgColor.rgb)
-        if rgb not in ("00000000", "FFFFFFFF", "0", "00"):
-            color_map = {
-                "FFFFFF00": "yellow",
-                "FFFF0000": "red",
-                "FF00FF00": "green",
-                "FF0000FF": "blue",
-                "FFFFC000": "orange",
-                "FFFF00FF": "pink",
-                "FFC0C0C0": "gray",
-                "FFD9E1F2": "light-blue",
-                "FFE2EFDA": "light-green",
-                "FFFFF2CC": "light-yellow",
-                "FFFCE4D6": "light-orange",
-            }
-            color_name = color_map.get(rgb, f"#{rgb[-6:]}")
-            annotations.append(f"bg:{color_name}")
-
-    # 删除线
-    if cell.font and cell.font.strikethrough:
-        annotations.append("strikethrough")
-
-    return annotations
+def setup_logging(verbose: bool):
+    level = logging.DEBUG if verbose else logging.INFO
+    logging.basicConfig(
+        level=level,
+        format="%(asctime)s [%(levelname)s] %(message)s",
+        datefmt="%H:%M:%S"
+    )
 
 
-def compute_actual_dimensions(ws, max_row, max_col):
-    """计算实际有数据的行列范围，避免空白区域"""
-    actual_max_col = 0
-    actual_max_row = 0
-    for row in range(1, max_row + 1):
-        for col in range(1, max_col + 1):
-            if ws.cell(row=row, column=col).value is not None:
-                actual_max_col = max(actual_max_col, col)
-                actual_max_row = max(actual_max_row, row)
-    return actual_max_row, actual_max_col
+# ========= cell formatting =========
 
+def get_cell_display(cell):
+    """
+    转换单元格为字符串
+    - 删除线内容直接忽略
+    - 支持粗体 / 斜体 / 超链接
+    - 换行转 <br>
+    """
 
-def format_cell_value(value, annotations=None):
-    """格式化单元格值为 Markdown 安全的字符串"""
-    if value is None:
-        return ""
+    # ❶ 如果是删除线，直接忽略
+    try:
+        f = cell.font
+        if f and getattr(f, "strike", False):
+            return ""
+    except Exception:
+        pass
 
-    text = str(value)
-    # 换行符转为 <br>
-    text = text.replace("\r\n", "<br>").replace("\n", "<br>").replace("\r", "<br>")
-    # 转义 Markdown 表格分隔符
+    val = cell.value
+    if val is None:
+        text = ""
+    else:
+        text = str(val).replace("\r", "").replace("\n", "<br>")
+
+    # 超链接
+    try:
+        hl = cell.hyperlink
+        if hl:
+            url = hl.target if hasattr(hl, "target") and hl.target else str(hl)
+            display_text = text if text else url
+            text = f"[{display_text}]({url})"
+    except Exception:
+        pass
+
+    # 避免破坏 markdown 表格
     text = text.replace("|", "\\|")
-    # 去除首尾空白
-    text = text.strip()
 
-    # 应用样式标注
-    if annotations:
-        if "bold" in annotations:
-            text = f"**{text}**"
-        if "strikethrough" in annotations:
-            text = f"~~{text}~~"
+    # 字体样式
+    try:
+        f = cell.font
+        if f:
+            if getattr(f, "bold", False):
+                text = f"**{text}**"
+            if getattr(f, "italic", False):
+                text = f"_{text}_"
+    except Exception:
+        pass
 
     return text
 
 
-def sheet_to_markdown(ws, sheet_name, extract_styles=False):
-    """将单个工作表转换为 Markdown"""
+# ========= merged cell handling =========
+
+def analyze_merged_cells(ws, merge_mode="tl"):
+    placement = {}
+
+    for merged in ws.merged_cells.ranges:
+        min_col, min_row, max_col, max_row = range_boundaries(str(merged))
+        top_cell = ws.cell(min_row, min_col)
+        top_text = get_cell_display(top_cell)
+
+        for r in range(min_row, max_row + 1):
+            for c in range(min_col, max_col + 1):
+                if merge_mode == "fill":
+                    placement[(r, c)] = top_text
+                else:
+                    if r == min_row and c == min_col:
+                        placement[(r, c)] = top_text
+
+    return placement
+
+
+# ========= real max column optimization =========
+
+def get_real_max_column(ws, scan_rows=200):
+    max_col = 0
     max_row = ws.max_row or 0
-    max_col = ws.max_column or 0
+    max_scan = min(max_row, scan_rows)
 
-    if max_row == 0 or max_col == 0:
-        return f"## {sheet_name}\n\n*该工作表为空*\n\n"
+    for row in ws.iter_rows(min_row=1, max_row=max_scan):
+        for cell in row:
+            if cell.value not in (None, ""):
+                if cell.column > max_col:
+                    max_col = cell.column
 
-    # 优化：计算实际有数据的范围
-    if max_col > 50 or max_row > 10000:
-        actual_max_row, actual_max_col = compute_actual_dimensions(ws, max_row, max_col)
-        if actual_max_col > 0:
-            max_col = actual_max_col
-        if actual_max_row > 0:
-            max_row = actual_max_row
+    for merged in ws.merged_cells.ranges:
+        min_col, min_row, max_col_m, max_row_m = range_boundaries(str(merged))
+        if max_col_m > max_col:
+            max_col = max_col_m
 
-    logger.info(f"工作表 [{sheet_name}]: {max_row} 行 x {max_col} 列")
-
-    # 收集合并单元格信息
-    merged_ranges = list(ws.merged_cells.ranges)
-
-    # 构建表格数据
-    rows = []
-    style_rows = [] if extract_styles else None
-
-    for row in range(1, max_row + 1):
-        row_data = []
-        row_styles = [] if extract_styles else None
-        for col in range(1, max_col + 1):
-            value = get_merged_cell_value(ws, row, col, merged_ranges)
-            annotations = (
-                get_cell_style_annotations(ws, row, col) if extract_styles else None
-            )
-            row_data.append(format_cell_value(value, annotations))
-            if extract_styles and row_styles is not None:
-                row_styles.append(annotations or [])
-        rows.append(row_data)
-        if extract_styles and style_rows is not None:
-            style_rows.append(row_styles)
-
-    if not rows:
-        return f"## {sheet_name}\n\n*该工作表为空*\n\n"
-
-    # 生成合法 Markdown 表格
-    md = f"## {sheet_name}\n\n"
-
-    # 表头（第一行）
-    header = rows[0]
-    md += "| " + " | ".join(header) + " |\n"
-    # 分隔行
-    md += "| " + " | ".join(["---"] * len(header)) + " |\n"
-    # 数据行
-    for row_data in rows[1:]:
-        # 确保列数与表头一致
-        while len(row_data) < len(header):
-            row_data.append("")
-        md += "| " + " | ".join(row_data[: len(header)]) + " |\n"
-
-    # 样式注解区域（如果有非空样式信息）
-    if extract_styles and style_rows:
-        has_any_style = any(
-            any(annotations for annotations in row_annotations)
-            for row_annotations in style_rows
-        )
-        if has_any_style:
-            md += "\n<details><summary>样式标注</summary>\n\n"
-            for r_idx, row_annotations in enumerate(style_rows):
-                for c_idx, annotations in enumerate(row_annotations):
-                    if annotations:
-                        md += f"- [{r_idx + 1},{c_idx + 1}]: {', '.join(annotations)}\n"
-            md += "\n</details>\n"
-
-    md += "\n"
-    return md
+    return max_col
 
 
-def excel_to_markdown(excel_file, output_file=None, extract_styles=False):
-    """
-    Excel 转 Markdown 主函数
+# ========= sheet -> rows =========
 
-    Args:
-        excel_file: 输入 Excel 文件路径
-        output_file: 输出 Markdown 文件路径（默认与 Excel 同名）
-        extract_styles: 是否提取样式语义标注
-    """
-    if isinstance(excel_file, bytes):
-        excel_file = excel_file.decode("utf-8")
+def sheet_to_table(ws, merge_mode="tl", trim=True):
+    start_time = time.time()
 
-    if not os.path.exists(excel_file):
-        abs_path = os.path.abspath(excel_file)
-        if os.path.exists(abs_path):
-            excel_file = abs_path
-        else:
-            logger.error(f"文件不存在: {excel_file}")
-            return None
+    max_r = ws.max_row or 0
+    real_max_c = get_real_max_column(ws)
+    max_c = real_max_c
 
-    supported = {".xlsx", ".xlsm", ".xltx", ".xltm", ".xls"}
-    ext = os.path.splitext(excel_file)[1].lower()
-    if ext not in supported:
-        logger.error(f"不支持的格式 {ext}，支持: {supported}")
-        return None
-
-    try:
-        wb = openpyxl.load_workbook(excel_file, data_only=True)
-    except InvalidFileException as e:
-        logger.error(f"文件格式错误: {e}")
-        return None
-    except Exception as e:
-        logger.error(f"打开文件失败: {e}")
-        return None
-
-    markdown_content = f"# {os.path.basename(excel_file)}\n\n"
-
-    for sheet_name in wb.sheetnames:
-        ws = wb[sheet_name]
-        markdown_content += sheet_to_markdown(ws, sheet_name, extract_styles)
-
-    if output_file is None:
-        output_file = os.path.splitext(excel_file)[0] + ".md"
-
-    os.makedirs(
-        os.path.dirname(output_file) if os.path.dirname(output_file) else ".",
-        exist_ok=True,
+    logger.info(
+        f"Sheet '{ws.title}' 开始处理 "
+        f"(行={max_r}, 真实列={real_max_c})"
     )
 
-    with open(output_file, "w", encoding="utf-8") as f:
-        f.write(markdown_content)
+    placement = analyze_merged_cells(ws, merge_mode=merge_mode)
 
-    logger.info(f"转换完成: {output_file}")
-    return output_file
+    rows = []
+
+    for r in range(1, max_r + 1):
+
+        if max_r >= 1000 and r % 100 == 0:
+            logger.info(f"Sheet '{ws.title}' 进度: {r}/{max_r}")
+
+        row_list = []
+
+        for c in range(1, max_c + 1):
+            if (r, c) in placement:
+                cell_text = placement[(r, c)]
+            else:
+                cell = ws.cell(r, c)
+                cell_text = get_cell_display(cell)
+
+            row_list.append(cell_text)
+
+        rows.append(row_list)
+
+    duration = time.time() - start_time
+    logger.info(
+        f"Sheet '{ws.title}' 处理完成，用时 {duration:.2f} 秒"
+    )
+
+    if trim:
+        rows = trim_empty_rows_cols(rows)
+
+    return rows
 
 
-def batch_convert(excel_files, extract_styles=False):
-    """批量转换"""
-    results = []
-    for f in excel_files:
-        try:
-            result = excel_to_markdown(f, extract_styles=extract_styles)
-            results.append((f, result))
-        except Exception as e:
-            logger.error(f"转换 {f} 失败: {e}")
-            results.append((f, None))
-    return results
+def trim_empty_rows_cols(rows):
+    if not rows:
+        return rows
+
+    top = 0
+    bottom = len(rows) - 1
+
+    while top <= bottom and all(
+        (not cell or str(cell).strip() == "")
+        for cell in rows[top]
+    ):
+        top += 1
+
+    while bottom >= top and all(
+        (not cell or str(cell).strip() == "")
+        for cell in rows[bottom]
+    ):
+        bottom -= 1
+
+    if top > bottom:
+        return []
+
+    rows = rows[top:bottom + 1]
+
+    num_cols = len(rows[0])
+    last_col = -1
+
+    for c in range(num_cols - 1, -1, -1):
+        if any(
+            rows[r][c] and str(rows[r][c]).strip() != ""
+            for r in range(len(rows))
+        ):
+            last_col = c
+            break
+
+    if last_col == -1:
+        return []
+
+    rows = [row[:last_col + 1] for row in rows]
+    return rows
+
+
+# ========= rendering =========
+
+def rows_to_markdown(rows):
+    if not rows:
+        return ""
+
+    header = rows[0]
+    sep = ["---"] * len(header)
+
+    def fmt_row(r):
+        cells = ["" if c is None else str(c) for c in r]
+        return "| " + " | ".join(cells) + " |"
+
+    lines = []
+    lines.append(fmt_row(header))
+    lines.append("| " + " | ".join(sep) + " |")
+
+    for r in rows[1:]:
+        lines.append(fmt_row(r))
+
+    return "\n".join(lines)
+
+
+# ========= workbook conversion =========
+
+def convert_workbook(input_xlsx, output_path,
+                     merge_mode="tl"):
+
+    wb = openpyxl.load_workbook(input_xlsx, data_only=True)
+
+    logger.info(f"开始处理工作簿: {input_xlsx}")
+    logger.info(f"Sheet 总数: {len(wb.sheetnames)}")
+
+    combined = []
+
+    for idx, sheetname in enumerate(wb.sheetnames, start=1):
+        logger.info(f"======== Sheet {idx}/{len(wb.sheetnames)} ========")
+
+        ws = wb[sheetname]
+        rows = sheet_to_table(ws, merge_mode=merge_mode, trim=True)
+
+        if not rows:
+            content = f"<!-- sheet {sheetname} is empty -->\n"
+        else:
+            md_table = rows_to_markdown(rows)
+            content = f"## {sheetname}\n\n{md_table}\n"
+
+        combined.append(content)
+
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write("\n\n".join(combined))
+
+    logger.info(f"全部完成，输出文件: {output_path}")
+
+
+# ========= CLI =========
+
+def main():
+    p = argparse.ArgumentParser(description="Excel to Markdown")
+    p.add_argument("input", help="输入 .xlsx 文件")
+    p.add_argument("-o", "--output", help="输出文件路径")
+    p.add_argument("--merge-mode",
+                   choices=["fill", "tl"],
+                   default="tl")
+    p.add_argument("--verbose",
+                   action="store_true")
+
+    args = p.parse_args()
+
+    setup_logging(args.verbose)
+
+    if not os.path.exists(args.input):
+        logger.error("输入文件不存在")
+        return
+
+    output = args.output
+    if not output:
+        base = os.path.splitext(os.path.basename(args.input))[0]
+        output = base + ".md"
+
+    convert_workbook(
+        args.input,
+        output,
+        merge_mode=args.merge_mode
+    )
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Excel 转 Markdown 工具")
-    parser.add_argument("--input", "-i", help="输入 Excel 文件路径")
-    parser.add_argument("--output", "-o", help="输出 Markdown 文件路径")
-    parser.add_argument("--batch", "-b", nargs="+", help="批量转换多个 Excel 文件")
-    parser.add_argument("--styles", "-s", action="store_true", help="提取样式语义标注")
-
-    # 兼容旧的调用方式（无参数名直接传文件路径）
-    args, unknown = parser.parse_known_args()
-
-    if args.batch:
-        batch_convert(args.batch, extract_styles=args.styles)
-    elif args.input:
-        excel_to_markdown(args.input, args.output, extract_styles=args.styles)
-    elif unknown:
-        # 兼容: python script.py file.xlsx [output.md]
-        excel_to_markdown(
-            unknown[0],
-            unknown[1] if len(unknown) > 1 else None,
-            extract_styles=args.styles,
-        )
-    else:
-        parser.print_help()
-        sys.exit(1)
+    main()
