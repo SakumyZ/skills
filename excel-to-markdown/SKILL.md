@@ -15,8 +15,7 @@ description: 将 Excel 文件转换为 Markdown 表格，支持合并单元格�
 openpyxl>=3.0.0
 ```
 
-找到 python 的安装路径，用户也可能直接使用 uv 等虚拟环境，所以需要考虑到用户环境的差异性，找到合适的 python 路径来执行脚本
-如果还是无法找到 python，可以提示用户安装 python 或者使用虚拟环境，然后结束程序。
+使用 `where python` 找到 python 的安装路径，如果 安装路径里包含 `uv`，则使用 `uv run` 命令来执行脚本，确保在虚拟环境中运行。如果无法找到 python，可以提示用户安装 python 或者使用虚拟环境，然后结束程序。
 
 ## 使用方法
 
