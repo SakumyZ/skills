@@ -180,8 +180,7 @@ skills/
 │   └── scripts/
 ├── excel-to-markdown/          # Excel to Markdown
 │   ├── SKILL.md
-│   ├── scripts/
-│   └── references/
+│   └── scripts/
 ├── github-pr-workflow/         # GitHub PR workflow
 │   ├── SKILL.md
 │   └── scripts/

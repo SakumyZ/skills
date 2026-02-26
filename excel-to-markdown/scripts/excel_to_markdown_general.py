@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
 """
 excel_to_md.py
 
@@ -16,8 +17,16 @@ from openpyxl.utils import range_boundaries
 import os
 import re
 import logging
+import logging.handlers
+import sys
 import time
 from html import escape
+
+# 确保 stdout 使用 UTF-8 编码
+if sys.stdout.encoding != 'utf-8':
+    sys.stdout.reconfigure(encoding='utf-8')
+if sys.stderr.encoding != 'utf-8':
+    sys.stderr.reconfigure(encoding='utf-8')
 
 
 # ========= logging =========
@@ -26,10 +35,20 @@ logger = logging.getLogger("excel_to_md")
 
 def setup_logging(verbose: bool):
     level = logging.DEBUG if verbose else logging.INFO
+
+    # 创建控制台处理器，指定 UTF-8 编码
+    console_handler = logging.StreamHandler(sys.stdout)
+    console_handler.setLevel(level)
+    console_handler.setFormatter(
+        logging.Formatter(
+            "%(asctime)s [%(levelname)s] %(message)s",
+            datefmt="%H:%M:%S"
+        )
+    )
+
     logging.basicConfig(
         level=level,
-        format="%(asctime)s [%(levelname)s] %(message)s",
-        datefmt="%H:%M:%S"
+        handlers=[console_handler]
     )
 
 
