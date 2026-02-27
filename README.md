@@ -126,6 +126,8 @@ End-to-end GitHub PR workflow automation.
 
 Access Redmine via API Token authentication to query ticket information.
 
+- Prerequisite: set environment variable `REDMINE_API_TOKEN` before using this skill
+
 - Supports ticket listing, single ticket details, and project ticket filtering
 - Filter by status, assignee, priority, tracker type, and more
 - Defaults to querying tickets assigned to the current user
