@@ -1,6 +1,6 @@
 # 🧰 AI Coding Skills Collection
 
-一套为 AI 编码助手设计的技能集合，涵盖前端开发、项目管理、数据处理等场景，提升开发效率。
+一套为 AI 编码助手设计的技能集合，涵盖前端开发、后端 DTO 工作流、项目管理、数据处理等场景，提升开发效率。
 
 [English](./README.md) | **中文**
 
@@ -11,9 +11,11 @@
 | [add-form-validation-rule](#add-form-validation-rule) | 表单校验规则新增工作流 | 前端开发 |
 | [code-review](#code-review)                           | 多维度代码审查         | 代码质量 |
 | [component-scaffolder](#component-scaffolder)         | 组件脚手架生成器       | 前端开发 |
+| [dto-validation-analyzer](#dto-validation-analyzer)   | JSON 与 Java DTO 校验 | 后端 / DTO |
 | [excel-sheet-splitter](#excel-sheet-splitter)         | Excel 工作表拆分工具   | 数据处理 |
 | [excel-to-markdown](#excel-to-markdown)               | Excel 转 Markdown 表格 | 数据处理 |
 | [github-pr-workflow](#github-pr-workflow)             | GitHub PR 自动化工作流 | 项目管理 |
+| [java-dto-to-ts](#java-dto-to-ts)                     | Java DTO 转 TS 接口    | 后端 / DTO |
 | [chat-to-obsidian-note](#chat-to-obsidian-note)       | 聊天转 Obsidian 笔记   | 工具     |
 | [model-id-lookup](#model-id-lookup)                   | AI 模型 ID 查询        | 工具     |
 | [perf-analyzer](#perf-analyzer)                       | 前端性能分析           | 代码质量 |
@@ -42,6 +44,28 @@
 - 探测项目现有规范（目录结构、命名规范、样式方案等）
 - 支持页面组件、业务组件、共通组件三种类型
 - 生成组件主文件、类型定义、样式文件和导出文件
+
+---
+
+## 🔌 后端 / DTO
+
+### dto-validation-analyzer
+
+分析 JSON 请求数据是否与 Java DTO 定义一致。
+
+- 检查字段缺失、多余字段、字段名不匹配、类型不匹配、必填校验等问题
+- 支持识别 `@Required`、`@NotNull`、`@NotBlank`、`@JsonProperty`、`@Schema` 等注解
+- 递归分析嵌套 DTO、集合类型以及 `@Valid` 级联校验
+- 按校验失败、潜在风险、信息提示三类输出分析结果
+
+### java-dto-to-ts
+
+将 Java DTO 类转换为 TypeScript interface 定义。
+
+- 自动完成常见 Java 类型到 TypeScript 类型的映射，支持集合、可选类型、Map、日期时间类型
+- 使用 `@Schema(name = ...)` 与 `@Schema(description = ...)` 生成字段名和 JSDoc 注释
+- 将 `@Required` 字段输出为必填属性，其余字段输出为可选属性
+- 将静态内部类展开为独立的导出 interface，并保证依赖顺序正确
 
 ---
 
@@ -168,40 +192,53 @@
 ## 📂 目录结构
 
 ```
-skills/
-├── add-form-validation-rule/   # 表单校验规则
+.
+├── LICENSE
+├── README.md
+├── README_CN.md
+├── add-form-validation-rule/
 │   └── SKILL.md
-├── code-review/                # 代码审查
+├── chat-to-obsidian-note/
 │   ├── SKILL.md
 │   └── references/
-├── component-scaffolder/       # 组件脚手架
+├── code-review/
 │   ├── SKILL.md
 │   └── references/
-├── excel-sheet-splitter/       # Excel 拆分
+├── component-scaffolder/
+│   ├── SKILL.md
+│   └── references/
+├── dto-validation-analyzer/
+│   └── SKILL.md
+├── excel-sheet-splitter/
+│   ├── LICENSE.txt
+│   ├── README.md
 │   ├── SKILL.md
 │   └── scripts/
-├── excel-to-markdown/          # Excel 转 Markdown
+├── excel-to-markdown/
 │   ├── SKILL.md
 │   └── scripts/
-├── github-pr-workflow/         # GitHub PR 工作流
+├── github-pr-workflow/
+│   ├── OPTIMIZATION_REPORT.md
+│   ├── OPTIMIZE_SUMMARY.md
+│   ├── QUICKSTART.md
+│   ├── README.md
 │   ├── SKILL.md
 │   └── scripts/
-├── chat-to-obsidian-note/      # 聊天转 Obsidian 笔记
+├── java-dto-to-ts/
+│   └── SKILL.md
+├── model-id-lookup/
 │   ├── SKILL.md
-│   └── references/
-├── model-id-lookup/            # 模型 ID 查询
-│   ├── SKILL.md
-│   ├── scripts/
-│   └── references/
-├── perf-analyzer/              # 性能分析
+│   ├── references/
+│   └── scripts/
+├── perf-analyzer/
 │   └── SKILL.md
-├── redmine-search/             # Redmine 查询
+├── redmine-search/
 │   └── SKILL.md
-├── redmine-ticket-to-task/     # 工单转开发计划
+├── redmine-ticket-to-task/
 │   └── SKILL.md
-├── smart-debugger/             # 智能调试
+├── smart-debugger/
 │   └── SKILL.md
-└── test-generator/             # 测试生成
+└── test-generator/
     └── SKILL.md
 ```
 

@@ -1,6 +1,6 @@
 # 🧰 AI Coding Skills Collection
 
-A collection of skills designed for AI coding assistants, covering frontend development, project management, data processing, and more to boost development efficiency.
+A collection of skills designed for AI coding assistants, covering frontend development, backend DTO workflows, project management, data processing, and more to boost development efficiency.
 
 **English** | [中文](./README_CN.md)
 
@@ -11,9 +11,11 @@ A collection of skills designed for AI coding assistants, covering frontend deve
 | [add-form-validation-rule](#add-form-validation-rule) | Form validation rule workflow   | Frontend Dev    |
 | [code-review](#code-review)                           | Multi-dimensional code review   | Code Quality    |
 | [component-scaffolder](#component-scaffolder)         | Component scaffolding generator | Frontend Dev    |
+| [dto-validation-analyzer](#dto-validation-analyzer)   | JSON and Java DTO validator     | Backend / DTO   |
 | [excel-sheet-splitter](#excel-sheet-splitter)         | Excel worksheet splitter        | Data Processing |
 | [excel-to-markdown](#excel-to-markdown)               | Excel to Markdown converter     | Data Processing |
 | [github-pr-workflow](#github-pr-workflow)             | GitHub PR automation workflow   | Project Mgmt    |
+| [java-dto-to-ts](#java-dto-to-ts)                     | Java DTO to TypeScript typings  | Backend / DTO   |
 | [chat-to-obsidian-note](#chat-to-obsidian-note)       | Chat to Obsidian knowledge note | Utilities       |
 | [model-id-lookup](#model-id-lookup)                   | AI model ID lookup              | Utilities       |
 | [perf-analyzer](#perf-analyzer)                       | Frontend performance analysis   | Code Quality    |
@@ -42,6 +44,28 @@ Automatically generates project-compliant component code from descriptions.
 - Probes existing project conventions (directory structure, naming conventions, styling, etc.)
 - Supports page, business, and common/atom component types
 - Generates component files, type definitions, styles, and exports
+
+---
+
+## 🔌 Backend / DTO
+
+### dto-validation-analyzer
+
+Analyzes whether a JSON request payload matches a Java DTO definition.
+
+- Checks missing fields, unknown fields, naming mismatches, type mismatches, and required validation rules
+- Understands annotations such as `@Required`, `@NotNull`, `@NotBlank`, `@JsonProperty`, and `@Schema`
+- Recursively inspects nested DTOs, collections, and `@Valid` cascaded validation
+- Outputs findings grouped by validation errors, warnings, and informational notes
+
+### java-dto-to-ts
+
+Converts Java DTO classes into TypeScript interface definitions.
+
+- Maps common Java types to TypeScript types, including collections, optionals, maps, and date/time types
+- Uses `@Schema(name = ...)` and `@Schema(description = ...)` for field naming and JSDoc generation
+- Treats `@Required` fields as required properties and other fields as optional
+- Expands static nested classes into standalone exported interfaces in dependency-safe order
 
 ---
 
@@ -168,40 +192,53 @@ Look up and verify AI model IDs.
 ## 📂 Directory Structure
 
 ```
-skills/
-├── add-form-validation-rule/   # Form validation rules
+.
+├── LICENSE
+├── README.md
+├── README_CN.md
+├── add-form-validation-rule/
 │   └── SKILL.md
-├── code-review/                # Code review
+├── chat-to-obsidian-note/
 │   ├── SKILL.md
 │   └── references/
-├── component-scaffolder/       # Component scaffolding
+├── code-review/
 │   ├── SKILL.md
 │   └── references/
-├── excel-sheet-splitter/       # Excel splitter
+├── component-scaffolder/
+│   ├── SKILL.md
+│   └── references/
+├── dto-validation-analyzer/
+│   └── SKILL.md
+├── excel-sheet-splitter/
+│   ├── LICENSE.txt
+│   ├── README.md
 │   ├── SKILL.md
 │   └── scripts/
-├── excel-to-markdown/          # Excel to Markdown
+├── excel-to-markdown/
 │   ├── SKILL.md
 │   └── scripts/
-├── github-pr-workflow/         # GitHub PR workflow
+├── github-pr-workflow/
+│   ├── OPTIMIZATION_REPORT.md
+│   ├── OPTIMIZE_SUMMARY.md
+│   ├── QUICKSTART.md
+│   ├── README.md
 │   ├── SKILL.md
 │   └── scripts/
-├── chat-to-obsidian-note/      # Chat to Obsidian note
+├── java-dto-to-ts/
+│   └── SKILL.md
+├── model-id-lookup/
 │   ├── SKILL.md
-│   └── references/
-├── model-id-lookup/            # Model ID lookup
-│   ├── SKILL.md
-│   ├── scripts/
-│   └── references/
-├── perf-analyzer/              # Performance analysis
+│   ├── references/
+│   └── scripts/
+├── perf-analyzer/
 │   └── SKILL.md
-├── redmine-search/             # Redmine search
+├── redmine-search/
 │   └── SKILL.md
-├── redmine-ticket-to-task/     # Ticket to dev plan
+├── redmine-ticket-to-task/
 │   └── SKILL.md
-├── smart-debugger/             # Smart debugger
+├── smart-debugger/
 │   └── SKILL.md
-└── test-generator/             # Test generator
+└── test-generator/
     └── SKILL.md
 ```
 
